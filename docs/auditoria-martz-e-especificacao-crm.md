@@ -558,6 +558,7 @@ A partir do `OPERACAO.md`:
 | Espaçamento por número (piso de 15s), janela de horário, teto diário, tentativas | ✅ |
 | Agendamento e Histórico, duplicar e cancelar | ✅ |
 | Backup diário com a API online do SQLite (14 cópias) | ✅ |
+| Integração Yampi | ✅ em testes |
 | SSH só por chave, UFW, fail2ban | ✅ |
 
 **Comparado com a Martz:** a disciplina de envio por número e as regras de
@@ -570,7 +571,8 @@ que só tem um limite diário genérico.
 
 | Módulo da Martz | Você tem? | Prioridade |
 |---|---|---|
-| Integração Shopify + Yampi (backfill, webhooks, reconciliação) | ❌ | **P0** |
+| Integração Yampi | ✅ **em testes** — manter, só complementar | **P0** (concluir testes) |
+| Integração Shopify (backfill, webhooks, reconciliação) | ❌ | **P0** |
 | Clientes / Leads / deduplicação por CPF | ❌ | **P0** |
 | Grupos com filtros E/OU/NÃO (começar pelas 15 categorias mais usadas) | ❌ | **P0** |
 | RFM diária com 11 segmentos | ❌ | **P0** |
@@ -697,7 +699,7 @@ A IA da Martz é, na prática, **atendimento**. A sua pode cobrir quatro frentes
 | Fase | Entrega | Depende de |
 |---|---|---|
 | **0 · Fundação** | Caddy/HTTPS, Postgres, Redis/filas, login com funções, backup externo | subdomínio |
-| **1 · Dados** | Shopify + Yampi (backfill em fatias, webhooks, reconciliação), deduplicação, Clientes/Leads, atributos | fase 0 |
+| **1 · Dados** | concluir testes da Yampi (já existe) + Shopify nova; deduplicação, Clientes/Leads, atributos | fase 0 |
 | **2 · Segmentação** | RFM diária, grupos (primeiras 15 categorias de filtro), tags, opt-out | fase 1 |
 | **3 · WhatsApp Oficial** | WABA própria, templates (6 formatos), sincronização, webhooks de status e qualidade | Business Manager verificado + chip dedicado |
 | **4 · Motor de campanhas** | 7 passos, 15 tipos, condições de disparo, janela, limite de atraso, limite diário, semi-automático, atividades | fases 2 e 3 |
