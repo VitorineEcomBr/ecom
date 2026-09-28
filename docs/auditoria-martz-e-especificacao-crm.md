@@ -1,6 +1,6 @@
 # Auditoria da Martz e especificação do CRM de Retenção Vitorine
 
-*Versão 2 — 26/09/2026 · baseada na leitura integral da central de ajuda da Martz (118 artigos, 16 seções)*
+*Versão 3 — 28/09/2026 · baseada na leitura integral da central de ajuda da Martz (118 artigos, 16 seções) e no levantamento real do servidor (`docs/estado-atual-crm-vitorine.md`)*
 
 ---
 
@@ -10,7 +10,7 @@
 |---|---|
 | Central de ajuda `ajuda.martz.com.br` | **Lida por inteiro**: 118 artigos, 16 seções. É a base desta versão. |
 | Painel logado `painel.martz.com.br` | **Não acessado.** O navegador desta sessão não consegue abrir o painel. Pontos que só o painel mostra estão marcados **[conferir no painel]**. |
-| O seu sistema do Grupo VIP | Analisado pelo `OPERACAO.md`. O código mora em `/opt/grupo-vip` na Contabo, não neste repositório. |
+| O seu sistema | Levantado no servidor em 28/09 (`docs/estado-atual-crm-vitorine.md`). O código mora em `/opt/grupo-vip/app/src`, sem git, não neste repositório. |
 
 Não estão publicados na central: as fases de estratégia 2, 4, 5, 6, 7 e 8
 (Resgate, Giftback, Promoções, Cross-sell, Aniversário VIP e Saudades VIP) e
@@ -545,136 +545,200 @@ Ordem recomendada de implantação:
 
 ---
 
-## 4. O que já existe no seu sistema (Grupo VIP)
+## 4. O que já existe no seu sistema (medido no servidor em 28/09)
 
-A partir do `OPERACAO.md`:
+Fonte: `docs/estado-atual-crm-vitorine.md`.
 
-| Recurso | Situação |
+| Camada | Estado real |
 |---|---|
-| Evolution API `2.4.0-rc2` + app próprio + SQLite | em produção na Contabo |
-| Até 2 números não oficiais, cada grupo com o seu número | ✅ |
-| Disparo em até 4 partes: texto, imagem, vídeo, GIF, áudio ptt, vídeo bolinha, carrossel com até 10 cards | ✅ |
-| Parte 1 nunca é carrossel nem áudio (garante a notificação por menção) | ✅ regra no banco |
-| Espaçamento por número (piso de 15s), janela de horário, teto diário, tentativas | ✅ |
-| Agendamento e Histórico, duplicar e cancelar | ✅ |
-| Backup diário com a API online do SQLite (14 cópias) | ✅ |
-| Integração Yampi | ✅ em testes |
-| SSH só por chave, UFW, fail2ban | ✅ |
-
-**Comparado com a Martz:** a disciplina de envio por número e as regras de
-formato para grupos são **mais sofisticadas que o disparo não oficial da Martz**,
-que só tem um limite diário genérico.
+| Stack | Node 22 · Fastify 5 · TypeScript strict · HTMX · **SQLite (better-sqlite3, WAL)** · Evolution API (Baileys) |
+| Infra | Contabo Europa (teste) → **Hostinger São Paulo** planejado para produção · Docker Compose · **Caddy com HTTPS** em `painel.vitorine.com.br` · DNS Cloudflare |
+| Código | 71 arquivos, 13.158 linhas, **só no servidor, sem git** |
+| Login | e-mail + código em aparelho novo · 1 usuário |
+| Marca branca | nome, logo, cor e fundo configuráveis. **Pensado para vender como produto** |
+| Grupos VIP | em produção: partes, botões, carrossel, agendamento, histórico, reenvio, sincronização (grupo novo entra bloqueado), ritmo por número |
+| Automações | **motor de fluxos** (gatilho + passos) em modo teste, funcionando de ponta a ponta |
+| Yampi | 7 gatilhos, HMAC sobre o corpo cru, varredura de carrinhos a cada 5 min, **cálculo de preço fiel ao checkout** (campanha de kit + cupom, conferido em 23 de 23 pedidos) |
+| Construtor | canvas estilo Reportana, compartilhado entre fluxos e mensagens; 9 tipos de parte, incluindo `produtos` |
+| Entregas | webhook da Evolution com status real (o `ERROR` só chega por webhook) |
+| Backup | diário às 04:00, 14 gerações, WAL aplicado; **nunca testado num servidor limpo** |
 
 ---
 
-## 5. Tabela de paridade — o que construir
+## 5. Encaixe módulo a módulo: Martz × o que você já tem
 
-| Módulo da Martz | Você tem? | Prioridade |
+Legenda: ✅ pronto · 🟡 parcial · ❌ não existe · ⛔ não se aplica.
+
+### 5.1 Campanhas da Martz → Fluxos do seu sistema
+
+O seu **Fluxo** (gatilho + passos) já é o equivalente da **Campanha** da Martz.
+Não é preciso criar um motor novo: basta estender o que existe.
+
+| Tipo de campanha Martz | No seu sistema | O que falta para encaixar |
 |---|---|---|
-| Integração Yampi | ✅ **em testes** — manter, só complementar | **P0** (concluir testes) |
-| Integração Shopify (backfill, webhooks, reconciliação) | ❌ | **P0** |
-| Clientes / Leads / deduplicação por CPF | ❌ | **P0** |
-| Grupos com filtros E/OU/NÃO (começar pelas 15 categorias mais usadas) | ❌ | **P0** |
-| RFM diária com 11 segmentos | ❌ | **P0** |
-| Motor de campanhas: 15 tipos, 7 passos, condições, janela, limite de atraso, limite diário | ❌ | **P0** |
-| Atividades com 11 status e "ver detalhes" | parcial (histórico de grupos) | **P0** |
-| WhatsApp Oficial: conexão, templates (6 formatos), mapeamento de variáveis, sincronização | ❌ | **P0** |
-| WhatsApp não oficial 1:1 (Evolution) | parcial (só grupos) | P1 |
-| Bônus: 4 tipos, multiplicador, lembrete, recuperação, cupom único na loja | ❌ | **P1** |
-| Indicadores: 5 visões + resultado por campanha + atribuição + UTMs | ❌ | **P1** |
-| E-mail: editor de arrastar blocos, kit da marca, domínio, supressões | ❌ | P1 |
-| Pop-up de captação | ❌ | P2 |
-| Pesquisas + campanha Avaliação | ❌ | P2 |
-| Atendimento (inbox) | ❌ | P2 |
-| IA de atendimento (Martin) | ❌ | P3 |
-| Vendedores, carteiras e painel do vendedor | ❌ | P3 (só se tiver equipe) |
-| Tag Manager e Analytics do site | ❌ | P3 |
-| SMS | ❌ | P3 |
-| **Grupos VIP** | ✅ | manter |
+| Carrinho Abandonado | ✅ fluxo 15 (`yampi.cart.reminder`), em teste | janela 09–20 e esperas em horas para ir a produção; **atualizar variáveis no envio** (item 6 da sua lista) |
+| Resgate (Pix/Boleto) e Recuperação de Pedidos | 🟡 gatilho `payment.refused` e `order.created` existem, sem fluxo | fluxo "pedido criado e não pago em X min"; **Pix copia-e-cola** (item 8) |
+| Status do Pedido | 🟡 gatilho `order.status.updated` existe | filtro por status no gatilho; **rastreio** `track_code`/`track_url` (item 7) |
+| Pós-Venda | 🟡 gatilho `order.paid` existe | filtros do pedido (valor, produto, categoria, pagamento, estado, primeira compra) |
+| Lembrete de Bônus | 🟡 gatilho `cashback.expiring` já chega, **com o cashback nativo da Yampi** | só montar o fluxo |
+| Boas-Vindas | ❌ | precisa saber se é a **primeira compra**, ou seja, precisa da base de pedidos (5.2) |
+| Saudades · Aniversário do Dia/Mês · Aniversário da 1ª Compra | ❌ | gatilhos **por tempo**: agendador diário varrendo a base de clientes (5.2) |
+| Comunicação (disparo segmentado) | ❌ | precisa de grupos de clientes (5.3); é o "Novo disparo" do VIP, só que 1:1 |
+| Comunicação com Assinantes | ❌ | pop-up (fase posterior) |
+| Avaliação | ❌ | pesquisas (fase posterior) |
+| Recuperação de Bônus | ⛔ por ora | só faz sentido com motor de bônus próprio (ver 5.7) |
+
+**Recursos da ação/campanha da Martz × os seus passos:**
+
+| Recurso Martz | No seu sistema |
+|---|---|
+| Espera só em **dias** | ✅ **melhor**: `esperar` em segundos |
+| Condição "não realizou compras após entrar" | ✅ **melhor**: o fluxo **encerra quando chega** `order.paid` (evento, não verificação na hora) |
+| Entrada: uma vez / infinitas / máximo / intervalo | 🟡 `uma_por_cliente` + quarentena `reentrada_min`; falta "máximo de N vezes" |
+| Janela de horário | ✅ por passo |
+| Dias da semana | ❌ |
+| **Limite de atraso** (expira a mensagem) | ❌ |
+| Limite diário da ação | 🟡 teto diário global |
+| Modo semi-automático | ❌ |
+| Público: incluir / excluir grupos | ❌ (depende de 5.3) |
+| Filtros do gatilho (22 no Status do Pedido) | ❌ o passo `condicao` cobre parte |
+| Pausar só uma ação | ❌ |
+| Clonar campanha | ❌ |
+| Ramificação | ❌ em ambos. **A Martz também não ramifica**: as ações são independentes. O seu **motor em grafo** vira diferencial |
+| Consulta HTTP no meio do fluxo | ✅ passo `consulta`. **A Martz não tem** |
+
+### 5.2 Clientes, pedidos e dados — a maior lacuna
+
+Hoje o sistema **reage a eventos** mas **não guarda uma base de clientes e
+pedidos**: só existe `eventos_recebidos`. Sem essa base não há Boas-Vindas,
+Saudades, aniversário, RFM, filtros, indicadores nem atribuição.
+
+| Martz | Seu sistema | Encaixe |
+|---|---|---|
+| Clientes / Leads | ❌ | tabelas `clientes`, `pedidos`, `itens_pedido`, alimentadas pelos webhooks que já chegam |
+| Backfill do histórico | ❌ | puxar da API da Yampi **em fatias diárias** (a própria Martz faz assim por causa do limite da API), com retomada |
+| Deduplicação | ❌ | chave CPF, com telefone E.164 e e-mail de reserva |
+| Casar pedido ↔ carrinho | ❌ (item 9) | por `cart_token`: é isso que dá **atribuição direta** de recuperação |
+| Atributos customizados | ❌ | tabela chave→valor por cliente e pedido |
+| Importar planilha | ❌ | P3 |
+
+### 5.3 Segmentação
+
+| Martz | Seu sistema | Encaixe |
+|---|---|---|
+| RFM (quintis, 11 segmentos, diário) | ❌ | job diário em SQL. O SQLite tem `NTILE()`, sem precisar de Postgres |
+| Grupos de clientes (29 categorias, 119 filtros, E/OU/NÃO) | ❌ | começar com 10 categorias: recência, frequência, valor, RFM, produto, categoria, cupom, forma de pagamento, estado, aniversário; + **"está no Grupo VIP"** |
+| Tags | ❌ | tabela simples |
+
+### 5.4 Atividades
+
+| Martz | Seu sistema |
+|---|---|
+| Tela única de atividades, 11 status, "ver detalhes" do erro | 🟡 os dados existem (`execucoes`, `execucao_passos`, `entregas`, webhook da Evolution), falta **uma tela única** e **status padronizados**: a executar · aguardando · atrasada · contato inválido · enviada · entregue · lida · falha · suprimida · completa |
+
+### 5.5 WhatsApp
+
+| Martz | Seu sistema | Encaixe |
+|---|---|---|
+| Não oficial (QR) | ✅ Evolution, com **ritmo por número** (a Martz só tem limite diário) | manter |
+| API Oficial + templates (6 formatos) | ❌ | novo **canal** ao lado da Evolution em `envio.ts`; tabela de templates Meta; o passo `mensagem` escolhe o canal |
+| Construtor | ✅ canvas com 9 tipos, incluindo `produtos` (a Martz não tem) | para o Oficial, um editor de template com as regras da Meta (cabeçalho ≤60, corpo ≤1.024, variáveis numeradas) |
+
+### 5.6 Variáveis
+
+As suas variáveis de carrinho são **mais ricas que as da Martz**: `{{resumo}}`
+com preço riscado, campanha de kit e cupom. Faltam: rastreio, link e código
+Pix, link da pesquisa, bônus próprio e `{{link}}` com UTM.
+
+### 5.7 Bônus
+
+A Yampi já tem **cashback nativo**, e o gatilho `cashback.expiring` já chega.
+Recomendação: **usar o cashback da Yampi** e não construir um motor de bônus
+agora. Cupom único por cliente, criado pela API da Yampi, entra só quando um
+fluxo precisar.
+
+### 5.8 Demais módulos
+
+| Martz | Seu sistema | Prioridade |
+|---|---|---|
+| Indicadores (5 visões) + resultado por campanha | ❌ (depende de 5.2) | P1 |
+| Atribuição 48h + UTMs | ❌ | P1: com `cart_token` você terá atribuição **direta**, melhor que a janela de 48h |
+| E-mail (editor, domínio, supressões) | ❌ (SMTP só para o código de login) | P2: já planejado, o construtor virou canvas por isso |
+| IA (Martin) | ❌ | P2: Redator e Analista com Claude |
+| Shopify | ❌ (item 10: webhook de tag) | P2 |
+| Pop-up · Pesquisas · Inbox de atendimento | ❌ | P3 |
+| Colaboradores e funções | 🟡 login por e-mail, 1 usuário | P3 (necessário ao vender) |
+| **Marca branca** | ✅ **a Martz não tem** | diferencial para vender |
+| Vendedores e carteiras | ⛔ operação de uma pessoa | descartar |
+| SMS | ⛔ | descartar por ora |
+| **Grupos VIP** | ✅ **a Martz não tem** | manter como está |
 
 ---
 
-## 6. Arquitetura proposta na Contabo
+## 6. Arquitetura: manter a stack atual
 
-```
-                         Internet (HTTPS · Caddy)
-                                  │
-     ┌────────────────┬───────────┼──────────────┬─────────────────┐
-  painel web     /webhooks/*   /p/pesquisa   /popup.js        /t (links + UTM)
-                Shopify·Yampi
-                Meta·Evolution
-                    SES
-     └────────────────┴──────► API (app) ◄──────┴─────────────────┘
-                                  │
-             ┌────────────────────┼─────────────────────┐
-         Postgres               Redis              Workers (BullMQ)
-      (dados do CRM)          (filas)     sync · RFM · motor · envio · IA · e-mail
-                                                     │
-          ┌─────────────────┬────────────────────────┼──────────────┬──────────┐
-     Meta Cloud API   Evolution API            Amazon SES      Claude API   modelo de
-     (1:1 oficial)    (grupos + 1:1)           (e-mail)        (IA)         imagem
-```
+A versão anterior desta auditoria recomendava Postgres e BullMQ. **Com o
+levantamento real, a recomendação muda:**
 
 | Decisão | Por quê |
 |---|---|
-| **Postgres** para o CRM | vários escritores ao mesmo tempo, filtros pesados (os 119 filtros viram SQL), RFM com `NTILE(5)` |
-| Postgres separado do da Evolution | atualizar a Evolution não pode arriscar os dados de clientes |
-| **Filas por número e por canal** | o espaçamento que você já faz nos grupos vira regra para todo envio não oficial |
-| **Caddy + HTTPS** | Shopify, Yampi e Meta só entregam webhook em HTTPS público |
-| Login por usuário, com funções | a Martz tem gestão de colaboradores; o seu painel hoje tem uma senha única |
-| **Backup fora da VPS** (B2 ou S3) | hoje o backup mora no mesmo servidor |
-| WhatsApp Oficial **direto na sua WABA** (token de usuário de sistema) | a Martz usa Embedded Signup e OBO porque atende muitas lojas. Para uma loja só, você não precisa ser Tech Provider da Meta |
-| E-mail pelo **Amazon SES** | a Martz cobra R$ 0,01 por e-mail; o SES custa uma fração disso. **Nunca envie e-mail direto do IP da VPS** |
-| Editor de e-mail **Unlayer** (ou GrapesJS + MJML) | é, muito provavelmente, o mesmo que a Martz usa |
-
-Tamanho de VPS: com Postgres, Redis, Evolution, app e workers, **8 GB de RAM** é
-o mínimo confortável.
+| **Manter Fastify + TypeScript + HTMX + SQLite** | o sistema funciona de ponta a ponta. Uma loja do porte da Vitorine gera milhares de pedidos por ano, não milhões; SQLite em WAL dá conta com folga, inclusive do RFM com `NTILE()` |
+| Postgres **só se** virar SaaS multi-loja | o "instalador que gera segredos novos para cada cliente" (item 12) aponta para **uma instalação por cliente**. Nesse modelo, cada cliente tem o próprio SQLite e não é preciso multi-tenant |
+| Fila no próprio banco | o motor já agenda passos no SQLite; basta acrescentar os status de atividade e a expiração |
+| **Camada de canais** em `envio.ts` | uma interface `enviar(canal, destino, mensagem)`: Evolution (já existe), Meta Oficial, e-mail. O Grupo VIP continua chamando a Evolution como hoje |
+| WhatsApp Oficial com **WABA do próprio cliente** | uma instalação por cliente = cada cliente conecta a sua WABA com token de usuário de sistema; **sem virar Tech Provider da Meta** |
+| E-mail por **Amazon SES** (ou Resend) | nunca direto do IP da VPS |
+| Caddy + HTTPS | ✅ já existe |
+| Backup **fora da VPS** | hoje as 14 gerações moram no mesmo disco |
 
 ---
 
 ## 7. Claude no lugar do Martin
 
-A IA da Martz é, na prática, **atendimento**. A sua pode cobrir quatro frentes:
+A IA da Martz é, na prática, **atendimento**. A sua pode cobrir mais frentes:
 
 | Agente | O que faz | Modelo sugerido |
 |---|---|---|
 | **Analista** (o que você chamou de "Martin Análise") | toda semana lê os indicadores e escreve o que mudou, por quê e as 3–5 ações; responde perguntas como "por que a recompra caiu?" | Opus para o relatório; Sonnet para perguntas |
-| **Redator** ("IA Personalizada") | escreve a ação da campanha no tom Vitorine, WhatsApp e e-mail, com variáveis corretas para o tipo de campanha | Sonnet |
+| **Redator** ("IA Personalizada") | escreve as partes da mensagem no construtor, no tom Vitorine, usando só as variáveis que existem para aquele gatilho | Sonnet |
 | **Revisor de template Meta** (substitui o GPT externo que a Martz indica) | antes de enviar para aprovação, aplica as regras de Utilidade e reescreve | Sonnet |
-| **Diretor de arte** | escreve o prompt da imagem; um **modelo de imagem** (Nano Banana ou GPT Image) gera; a imagem entra no bloco do e-mail ou no cabeçalho do template. O Claude não gera imagens | Sonnet + API de imagem |
-| **Segmentador** | transforma uma frase em grupo ("comprou mocassim, não voltou em 90 dias") usando os 119 filtros como ferramentas | Sonnet com tool use |
+| **Diretor de arte** | escreve o prompt da imagem; um **modelo de imagem** (Nano Banana ou GPT Image) gera; a imagem entra no construtor. O Claude não gera imagens | Sonnet + API de imagem |
+| **Segmentador** | transforma uma frase em grupo de clientes ("comprou mocassim, não voltou em 90 dias") usando os filtros como ferramentas | Sonnet com tool use |
 | **Atendente** (fase posterior) | copia a arquitetura do Martin: coordenador + especialistas + juiz + termômetro de frustração, com copiloto antes do autônomo | Sonnet (juiz em Haiku) |
 
 **Regras de construção:**
-- A chamada ao Claude sai **só do backend**.
+- A chamada ao Claude sai **só do backend**, com a chave no `.env`.
 - O agente recebe **números agregados**, nunca a base crua.
 - A voz da marca (a sua skill de persona) entra como system prompt com cache.
-- No atendente, adotar as regras do Martin, que são boas: Fonte da Verdade,
-  nada de estoque, CPF mascarado, cancelamento vai para um humano, **janela de
-  60s para desfazer**.
+- No atendente, adotar as regras do Martin: Fonte da Verdade, nada de estoque,
+  CPF mascarado, cancelamento vai para um humano, **janela de 60s para desfazer**.
 
 ---
 
-## 8. Onde dá para ser melhor que a Martz
+## 8. Onde você já está ou pode ficar à frente da Martz
 
-1. **Grupos VIP integrados ao CRM:** cruzar participantes com clientes; filtros
-   "está / não está no VIP"; campanha "convidar Campeões para o VIP"; receita do
-   grupo com cupom exclusivo.
-2. **Reavaliar a elegibilidade no envio, não só na entrada.** A Martz admite que
-   não faz: quem já pagou pode receber "seu Pix vai vencer".
-3. **Espera em minutos e horas dentro da régua.** A Martz só tem dias, então
-   carrinho em 30 min + 4h + 24h é impossível lá.
-4. **Grupo de controle** (ex.: 10% dos elegíveis não recebem) para medir a
-   receita realmente adicionada, e não só a janela de 48h.
-5. **Pausar sem pegar clientes retroativos**, como opção na própria tela, sem
-   precisar clonar.
-6. **Contagem de marketing por cliente.** Respeitar o limite da Meta de 2
-   templates de marketing em 24h **antes** de enviar, em vez de receber o erro
-   131049.
-7. **Pausa automática por qualidade** do número oficial (a Martz só documenta
-   como corrigir depois).
-8. **Analista com IA**, que a Martz não tem publicado.
-9. **Custo menor de e-mail** com SES direto.
+**Já está à frente:**
+1. **Grupos VIP** com ritmo por número e regras de formato.
+2. **Marca branca**, essencial para vender.
+3. **Espera em segundos** dentro da régua (a Martz só tem dias).
+4. **Encerrar o fluxo por evento** (`order.paid`) no lugar de uma verificação
+   agendada.
+5. **Preço do carrinho fiel ao checkout**, com campanha de kit e cupom.
+6. **Tipo de parte `produtos`** com fotos e preços.
+7. **Passo `consulta`** (chamada HTTP no meio do fluxo).
+8. **Identidade do carrinho por conteúdo**: o cliente que troca o produto recebe
+   de novo, sem duplicar.
+
+**Pode ficar à frente com o que já está planejado:**
+1. **Motor em grafo**, com ramificação real. A Martz não tem.
+2. **Variáveis recalculadas no envio**: resolve o ponto fraco que a própria
+   Martz admite, de avaliar o cliente só na entrada.
+3. **Atribuição direta por `cart_token`**, mais honesta que a janela de 48h.
+4. **Grupos VIP ligados ao CRM**: filtro "está no VIP", convite automático para
+   Campeões, receita do grupo com cupom exclusivo.
+5. **Grupo de controle** para medir a receita que a campanha realmente adiciona.
+6. **Contagem de mensagens de marketing por cliente** antes de enviar pelo Oficial.
+7. **Analista com Claude**, que a Martz não tem publicado.
 
 ---
 
@@ -682,51 +746,57 @@ A IA da Martz é, na prática, **atendimento**. A sua pode cobrir quatro frentes
 
 | # | Ponto | Risco | Ação |
 |---|---|---|---|
-| 1 | Evolution `2.4.0-rc2` | versão de teste em produção | fixar numa estável, com backup antes |
-| 2 | Backup só na VPS | perder a VPS = perder tudo | cópia diária automática para B2 ou S3 |
-| 3 | Senha única do painel no `.env` | sem usuário por pessoa e sem registro de ações | login com funções + log de auditoria |
-| 4 | Painel só por túnel SSH | webhooks exigem HTTPS público | Caddy + subdomínio |
-| 5 | SQLite | não aguenta a carga do CRM | CRM em Postgres; Grupo VIP migra depois |
-| 6 | Limite de 2 números | CRM precisa de oficial + não oficial | limite configurável |
-| 7 | Sem limite de atraso nem expiração | mensagem presa sai fora de contexto | expirar a atividade |
-| 8 | Sem lista de supressão | quem pediu para sair continua recebendo | tabela de opt-out + palavras "SAIR" |
-| 9 | LGPD | base com CPF e telefone | aceite por canal, exclusão a pedido, credenciais cifradas |
+| 1 | **Código sem git** | uma edição errada não tem volta; o único ponto de recuperação é o backup diário | **antes de qualquer mudança**: repositório privado no GitHub |
+| 2 | Restauração **nunca testada** | o backup pode não prestar | testar num servidor limpo; fazer junto com a migração para a Hostinger |
+| 3 | Backup no mesmo disco | perder a VPS = perder tudo | cópia diária automática para fora (B2 ou S3) |
+| 4 | Restaurar pode **reenviar disparo** | cliente recebe de novo | ao restaurar, subir com todos os fluxos e disparos pausados |
+| 5 | Evolution `2.4.0-rc2` | versão de teste em produção | fixar numa estável, com backup antes |
+| 6 | Contabo na Europa | latência | migração para Hostinger SP já decidida |
+| 7 | Sem base de clientes/pedidos | não dá para ter RFM, filtros, indicadores | fase 2 do roteiro |
+| 8 | Sem limite de atraso | mensagem presa sai fora de contexto | expirar a atividade |
+| 9 | Sem lista de descadastro | quem pediu para sair continua recebendo | tabela de opt-out + palavras "SAIR", "PARAR" |
+| 10 | ~15 rotas legadas respondendo | superfície de ataque sem uso | remover |
+| 11 | Dependência invertida `BLOCOS` | acoplamento entre telas | mover o catálogo para `construtor.ts` |
+| 12 | Mensagens pedem "responda nesta conversa" | respostas chegam num número que ninguém vigia pelo painel | vigiar o celular do Sac até existir inbox |
 
 ---
 
-## 10. Roteiro de construção
+## 10. Roteiro de construção (encaixado no que existe)
 
-| Fase | Entrega | Depende de |
+| Fase | Entrega | Critério de aceite |
 |---|---|---|
-| **0 · Fundação** | Caddy/HTTPS, Postgres, Redis/filas, login com funções, backup externo | subdomínio |
-| **1 · Dados** | concluir testes da Yampi (já existe) + Shopify nova; deduplicação, Clientes/Leads, atributos | fase 0 |
-| **2 · Segmentação** | RFM diária, grupos (primeiras 15 categorias de filtro), tags, opt-out | fase 1 |
-| **3 · WhatsApp Oficial** | WABA própria, templates (6 formatos), sincronização, webhooks de status e qualidade | Business Manager verificado + chip dedicado |
-| **4 · Motor de campanhas** | 7 passos, 15 tipos, condições de disparo, janela, limite de atraso, limite diário, semi-automático, atividades | fases 2 e 3 |
-| **5 · Bônus + atribuição** | cupom único na loja, cashback, lembrete e recuperação, indicadores por campanha, UTMs, janela de 48h + grupo de controle | fase 4 |
-| **6 · E-mail** | Unlayer, kit da marca, SES, domínio, supressões | domínio |
-| **7 · Claude** | Redator, Revisor de template, Analista semanal, Diretor de arte | chave da API |
-| **8 · Grupo VIP no CRM** | números unificados, cruzamento cliente ↔ grupo, filtros VIP | fase 2 |
-| **9 · Captação e pesquisa** | pop-up, pesquisas, campanha Avaliação | fase 4 |
-| **10 · Atendimento** | inbox, setores, macros e depois o atendente com IA | fase 3 |
+| **0 · Base segura** | git + repositório privado; backup fora da VPS; remover rotas legadas; corrigir `BLOCOS` | `git log` com o código atual; backup aparecendo no armazenamento externo |
+| **1 · Carrinho em produção** | variáveis recalculadas no envio; limite de atraso; dias da semana; janela 09–20 e esperas em horas; **sair do modo teste só com a sua ordem** | 1 semana em produção sem mensagem fora de janela nem duplicada |
+| **2 · Base de dados da loja** | `clientes`, `pedidos`, `itens`; backfill Yampi em fatias diárias; deduplicação; casar `cart_token` | total de pedidos do painel batendo com a Yampi no mesmo período |
+| **3 · Fluxos transacionais** | filtros no gatilho; tela única de Atividades; fluxos: Pix/pagamento recusado, status + rastreio, pós-compra, cashback vencendo | cada fluxo testado no `TELEFONE_TESTE` |
+| **4 · Motor em grafo** | nó de condição com dois caminhos, migrando o fluxo 15 sem mudar o comportamento | fluxo 15 idêntico antes e depois |
+| **5 · Segmentação** | RFM diária, grupos de clientes, gatilhos por tempo (saudades, aniversário), comunicação segmentada, **filtro "está no VIP"** | grupo "Campeões" com contagem conferida à mão |
+| **6 · Indicadores** | receita recuperada (atribuição direta), por fluxo, recompra, coorte simples | receita atribuída conferida pedido a pedido numa semana |
+| **7 · WhatsApp Oficial** | canal Meta, templates, sincronização, status de entrega e qualidade | template aprovado e entregue num número de teste |
+| **8 · Claude** | Redator no construtor, Analista semanal, Revisor de template | relatório semanal gerado com dados reais |
+| **9 · E-mail** | canal de e-mail no construtor, SES, domínio, descadastro | e-mail de carrinho entregue na caixa principal, não no spam |
+| **10 · Shopify e captação** | webhooks da Shopify, pop-up, pesquisas | — |
+| **11 · Produto** | instalador, colaboradores com funções, checklist de entrega, migração para Hostinger SP com restauração testada | instalação limpa de ponta a ponta num servidor novo |
 
-As fases 1 a 4 já rodam **Status do Pedido + Carrinho + Resgate de Pix**, que é
-exatamente a ordem que a própria Martz recomenda para gerar retorno primeiro.
+A ordem prioriza receita: o carrinho vai para produção na fase 1, e os fluxos
+de Pix, rastreio e pós-compra vêm logo depois, a mesma ordem que a própria
+Martz recomenda aos lojistas.
 
 ---
 
 ## 11. Decisões que são suas
 
-1. **Stack:** reaproveitar a linguagem do `gv-app` ou começar em Node/TypeScript
-   + Next.js?
-2. **Checkout:** Shopify pura, Yampi pura, ou Shopify com checkout Yampi? Isso
-   define quem é o "dono" do pedido.
-3. **Número oficial:** chip novo (recomendado pela própria Martz) ou migrar um
-   atual? Um número migrado para a API **para de funcionar** no app e na
-   Evolution, então não pode ser o número dos grupos.
-4. **Provedor de e-mail** e **modelo de imagem**.
-5. **Só Vitorine ou multi-loja** (vender como a Martz)? Multi-loja muda o banco
-   desde o primeiro dia e exige virar Tech Provider da Meta.
+1. **Modelo de produto:** uma instalação por cliente (o que o instalador
+   sugere, e o que recomendo) ou SaaS multi-loja? Isso decide se o SQLite fica
+   para sempre ou se um dia vai para Postgres.
+2. **Número do WhatsApp Oficial:** chip novo, dedicado. O Sac Vitorine está na
+   Evolution: se migrar para a API Oficial, **para de funcionar** nos grupos.
+3. **Papel da Shopify:** a loja é Shopify com checkout Yampi? Quais eventos
+   devem vir de cada uma?
+4. **Bônus:** usar só o cashback nativo da Yampi (recomendado agora) ou
+   construir um motor próprio de bônus?
+5. **Provedor de e-mail** e **modelo de imagem**.
+6. **Quando o fluxo de carrinho sai do modo teste**, e com quais horários e esperas.
 
 ---
 
