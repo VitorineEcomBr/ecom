@@ -21,6 +21,13 @@ Sua missão tem duas partes:
 Esta tarefa é **só de análise e planejamento**. Nada é implementado antes da
 minha aprovação.
 
+**Pasta de trabalho:** a pasta local **`DEV - CRM Vitorine`**, no meu Mac, onde
+esta sessão foi aberta. Nela estão os documentos do projeto (`OPERACAO.md`, a
+especificação do estado atual e demais arquivos). **Leia todos os arquivos dessa
+pasta antes de começar**: eles complementam este prompt e, se algo divergir, o
+que foi medido no servidor vale mais. O código do CRM **não** está nessa pasta:
+ele fica só no servidor (seção 2.3).
+
 ---
 
 ## 2. O NOSSO SISTEMA HOJE (medido no servidor em 28/09/2026)
@@ -395,7 +402,7 @@ No fim: árvore completa do menu, telas que não abriu (e por quê), ações nã
 testadas.
 
 ### FASE 2 — Conferência do nosso sistema (SSH, somente leitura)
-A seção 2 já descreve o sistema. **Confira e complete; não refaça.**
+A seção 2 e os documentos da pasta `DEV - CRM Vitorine` já descrevem o sistema. **Confira e complete; não refaça.**
 1. Confira se a seção 2 bate com o servidor (tabelas e contagens, nomes dos
    ajustes, rotas, fluxos). Registre as diferenças.
 2. Leia e explique como funciona hoje, apontando onde cada mudança entraria:
@@ -473,7 +480,7 @@ Ordem-base (ajuste com o que as fases anteriores mostrarem):
 
 ## 8. ENTREGÁVEIS
 
-Salve em `docs/analise-martz/` na pasta local:
+Salve em uma subpasta nova **`analise-martz/`** dentro de **`DEV - CRM Vitorine`**. Não altere nem apague os arquivos que já existem na pasta:
 
 1. `01-varredura-martz.md` — Fase 1, tela a tela.
 2. `02-conferencia-sistema-atual.md` — Fase 2.
