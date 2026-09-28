@@ -1,12 +1,15 @@
 # Prompt — Análise completa da Martz e encaixe no CRM Vitorine
 
-> **Como usar:** cole tudo o que está abaixo da linha em uma sessão do **Claude Code
-> aberta na pasta do projeto no seu Mac**, com o Chrome conectado (`claude --chrome`)
-> e logado em `painel.martz.com.br`. Anexe junto o arquivo
-> `docs/auditoria-martz-e-especificacao-crm.md`.
+> **Como usar**
 >
-> Sem Chrome conectado, a Fase 1 pode ser feita com prints das telas: o agente
-> analisa as imagens no lugar de navegar.
+> 1. No Chrome do seu Mac, instale a extensão **Claude** e entre com a sua conta.
+> 2. Deixe `painel.martz.com.br` aberto e logado.
+> 3. No Terminal, entre na pasta do projeto e rode `claude --chrome`.
+> 4. Cole tudo o que está abaixo da linha.
+>
+> O agente abre o navegador sozinho e navega pelo painel usando a sua sessão.
+> Ele **não digita senha**: se cair na tela de login, ele para e pede para você
+> entrar.
 
 ---
 
@@ -14,8 +17,9 @@
 
 Você é um arquiteto de software sênior especializado em CRM de retenção para
 e-commerce, WhatsApp (API Oficial da Meta e Evolution API) e integrações com
-Shopify e Yampi. Sua tarefa é **analisar por dentro tudo o que a Martz CRM tem**
-e **encaixar no sistema que já estamos construindo**, sem quebrar o que já funciona.
+Shopify e Yampi. Sua tarefa é **abrir o navegador, analisar por dentro tudo o que
+a Martz CRM tem** e **encaixar no sistema que já estamos construindo**, sem
+quebrar o que já funciona.
 
 ## CONTEXTO DO PROJETO
 
@@ -32,7 +36,8 @@ e **encaixar no sistema que já estamos construindo**, sem quebrar o que já fun
   imagem à parte.
 - **Referência obrigatória:** `docs/auditoria-martz-e-especificacao-crm.md`
   (auditoria v2, feita a partir dos 118 artigos da central de ajuda da Martz).
-  **Leia inteira antes de começar.**
+  Se não estiver na pasta, baixe do GitHub: repositório `VitorineEcomBr/ecom`,
+  branch `claude/inspiring-tesla-ax7voi`. **Leia inteira antes de começar.**
 
 ## O QUE JÁ ESTÁ PRONTO E NÃO PODE QUEBRAR
 
@@ -60,14 +65,21 @@ Tudo abaixo é intocável. O CRM se conecta a ele, nunca o reescreve.
 
 1. **Esta tarefa é só de análise e planejamento.** Não altere código, banco,
    `.env`, `docker-compose.yml` nem nada no servidor. Não faça commit.
-2. **Na Martz, somente leitura:**
-   - Não clique em Salvar, Criar, Enviar, Disparar, Ativar, Publicar, Excluir,
-     Duplicar, Clonar, Conectar, Desconectar, Sincronizar, Importar nem Pagar.
+2. **No navegador, na Martz, somente leitura:**
+   - Não clique em Salvar, Criar, Enviar, Disparar, Ativar, Pausar, Publicar,
+     Excluir, Duplicar, Clonar, Conectar, Desconectar, Sincronizar, Importar,
+     Pagar nem "Enviar mensagem de teste".
    - Pode abrir abas, formulários, assistentes e modais para ver o que existe,
-     e depois feche ou cancele.
+     e depois feche com Cancelar, Voltar ou X.
+   - Se um assistente pedir para salvar para avançar de etapa, **não salve**:
+     anote "etapa bloqueada sem salvar" e siga para a próxima tela.
    - Na dúvida se uma ação muda algo, **não faça**: anote "não testado".
    - Não copie dados pessoais de clientes (nome, telefone, e-mail, CPF). Só
      números agregados.
+   - **Nunca digite senha.** Se aparecer a tela de login ou um pedido de código
+     de verificação, pare e me chame.
+   - Não abra links que saiam da Martz (Meta Business, Shopify, Yampi), exceto
+     para ler uma página de documentação.
 3. **No servidor, só comandos de leitura** (`ls`, `cat`, `grep`, `docker compose ps`,
    `docker compose logs`, `sqlite3 ... ".schema"` e `SELECT count(*)`). Nunca:
    - `docker compose down -v`;
@@ -75,21 +87,38 @@ Tudo abaixo é intocável. O CRM se conecta a ele, nunca o reescreve.
    - reiniciar contêineres;
    - ler ou imprimir o valor de segredos do `.env`. Liste só os nomes das variáveis.
 4. Se precisar de algo fora dessas regras, **pare e pergunte**.
+5. **Salve o progresso a cada seção concluída.** Se a sessão for interrompida,
+   retome da última seção salva, sem refazer o que já está pronto.
 
 ---
 
-## FASE 0 — Preparação
+## FASE 0 — Preparação e abertura do navegador
 
 1. Leia `docs/auditoria-martz-e-especificacao-crm.md` e o `OPERACAO.md`.
 2. Liste os itens da auditoria marcados **[conferir no painel]**. Eles são
    prioridade na Fase 1.
+3. **Abra o navegador:**
+   - Use as ferramentas do Chrome para abrir uma aba nova em
+     `https://painel.martz.com.br/dashboards`.
+   - Confirme que o painel carregou logado. Se aparecer a tela de login, pare e
+     me avise.
+   - Feche pop-ups de novidades e o chat de suporte, se atrapalharem a navegação.
+   - Faça uma captura de tela da página inicial e descreva o **menu lateral
+     completo** antes de começar.
 
-## FASE 1 — Varredura da Martz por dentro (painel logado, somente leitura)
+## FASE 1 — Varredura da Martz por dentro (navegador, somente leitura)
 
-Percorra **todos** os itens do menu lateral, os submenus, o menu do usuário
-(Configurações) e o Painel do Vendedor, se houver acesso. Em cada tela, abra
-todas as abas, filtros, botões de "novo", assistentes e modais. Só olhe e
-depois feche.
+Percorra **todos** os itens do menu lateral, na ordem em que aparecem, e todos os
+submenus. Depois percorra o menu do usuário, no canto superior direito
+(Configurações e todas as suas seções). Por último, o Painel do Vendedor
+(`vendedor.martz.com.br`), se houver acesso sem digitar senha.
+
+Em cada tela:
+- faça uma captura de tela;
+- abra todas as abas, filtros, botões de "novo", assistentes, menus de três
+  pontos e modais. Só olhe e depois feche;
+- passe o mouse sobre os ícones de "?" para ler os textos de ajuda;
+- role a página até o fim.
 
 **Registre cada tela neste formato:**
 
@@ -113,32 +142,43 @@ depois feche.
 1. **Itens [conferir no painel] da auditoria:**
    - **geração de imagem com IA** no editor de e-mail: onde fica, o que pede,
      estilos, tamanhos, limites e custo;
-   - a opção **"IA Personalizada"** nas ações de campanha: o que pede e o que entrega;
+   - a opção **"IA Personalizada"** nas ações de campanha: o que pede e o que
+     entrega. Abra o seletor e leia, mas **não gere**;
    - qualquer **análise com IA** nos indicadores ou dashboards;
    - a **lista completa de predefinições de texto** de cada tipo de campanha
      (copie os textos);
    - a tela do **número não oficial**: limite diário, intervalo entre mensagens,
      status, reconexão;
    - qualquer menção às fases de estratégia 2, 4, 5, 6, 7 e 8.
-2. **Criar campanha:** abra o assistente de **cada um dos 15 tipos** (e a Campanha
-   de Vendedores) e documente os 7 passos. Inclua todos os parâmetros de gatilho,
-   todas as condições de disparo, todos os campos do Bônus e todas as opções
-   avançadas da ação.
-3. **Grupos de clientes:** confirme as 29 categorias e os 119 filtros e anote
-   os que não estiverem na auditoria.
-4. **Indicadores:** cada visão, cada métrica, cada filtro de período e o
-   resultado de uma campanha (aba de resultados e aba de atividades).
-5. **WhatsApp:**
+2. **Criar campanha:** clique em "Nova campanha" e abra o assistente de **cada um
+   dos 15 tipos** e da Campanha de Vendedores. Documente os 7 passos: todos os
+   parâmetros de gatilho, todas as condições de disparo, todos os campos do Bônus
+   e todas as opções avançadas da ação. **Saia sem criar e sem salvar rascunho.**
+3. **Campanhas existentes:** abra as de exemplo, se houver, nas abas de
+   resultados e de atividades. Anote a estrutura das telas, não os dados de
+   clientes.
+4. **Grupos de clientes:** abra "Criar novo grupo", depois "Adicionar filtro".
+   Confirme as 29 categorias e os 119 filtros e anote os que não estiverem na
+   auditoria. Saia sem criar.
+5. **Indicadores:** cada visão, cada métrica, cada filtro de período e o criador
+   de dashboards.
+6. **WhatsApp:**
    - Telefones Oficiais: dados mostrados, qualidade, limite, métodos de pagamento;
-   - Modelos de Mensagem: formatos, campos, validações, sincronização;
+   - Modelos de Mensagem: abra "Criar novo modelo" e percorra os 6 formatos, com
+     campos e validações, **sem enviar para aprovação**;
    - número não oficial.
-6. **Modelos de e-mail:** blocos do editor, categorias de modelos prontos, Kit da
-   marca, bloco de produtos dinâmico.
-7. **Atendimento e Martin:** todas as telas de configuração dos agentes, com
-   campos, valores padrão e textos de ajuda.
-8. **Integrações:** a tela da Yampi e a da Shopify, mostrando o que pedem e quais
-   status aparecem.
-9. **Configurações:** todas as seções, inclusive usuários, funções e permissões.
+7. **Modelos de e-mail:** abra o editor de um modelo pré-definido e documente os
+   blocos, as categorias, o Kit da marca, o bloco de produtos dinâmico e o
+   recurso de imagem com IA. Saia sem salvar.
+8. **Pop-ups e Pesquisas:** abra o editor de novo pop-up (as 7 seções) e o de
+   nova pesquisa (tipos de pergunta). Saia sem salvar.
+9. **Atendimento e Martin:** a inbox e todas as telas de configuração dos agentes,
+   com campos, valores padrão e textos de ajuda.
+10. **Integrações:** a lista completa e as telas da Yampi e da Shopify, mostrando
+    o que pedem e quais status aparecem. **Não clique em Integrar.**
+11. **Configurações:** todas as seções, inclusive usuários, funções e
+    permissões, chaves de acesso, Tag Manager, remetente de e-mail, supressões,
+    vendedores, unidades e carteira de créditos.
 
 **No fim da fase entregue:**
 - a árvore completa do menu;
@@ -185,7 +225,7 @@ Para **cada funcionalidade da Martz** (auditoria + Fase 1), preencha:
 - bônus (valor fixo, percentual, cashback, frete grátis, multiplicador,
   lembrete, recuperação, cupom único criado na loja);
 - indicadores (5 visões), resultado por campanha, atribuição direta e em 48h, UTMs;
-- e-mail (editor, kit da marca, domínio, supressões);
+- e-mail (editor, kit da marca, domínio, supressões, imagem com IA);
 - pop-up, pesquisas e a campanha Avaliação;
 - atendimento (inbox, setores, macros);
 - IA (Martin → agentes com Claude);
